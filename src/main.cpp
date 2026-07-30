@@ -4,6 +4,8 @@
 #include "hlib/Array.h"
 #include "hlib/String.h"
 
+#include "CML.h"
+
 #include "codes.h"
 
 #define CBB_DEFAULT_PROJECT     ("default.cml")
@@ -62,15 +64,31 @@ int main(int argc, char** argv) {
         exit(RET_BAD_ARGS);
     }
 
+    printf("Working with '%s'\n", g_cvars.projectFile);
+
     if( g_cvars.targets.Length() > 0 ) {
+        g_cvars.targets.Shrink();
         puts("Targets: ");
         for(int i = 0; i < g_cvars.targets.Length(); i++) {
-            printf("\t%s\n", g_cvars.targets[i]);
+            printf("\t+ %s\n", g_cvars.targets[i]);
         }
 
     } else {
         printf("Nothing to do\n");
         exit(RET_SUCCESS);
+    }
+
+    cml::CTextParser parser;
+
+    cml::ETextError code = parser.Parse(g_cvars.projectFile, false);
+
+    if(code != cml::ETextError::Ok) {
+        char buff[128];
+        parser.FormatError(code, buff, sizeof(buff));
+        puts(buff);
+        exit(RET_BAD_CML);
+    } else {
+        cml::PrintObject(parser.Root());
     }
 
     return RET_SUCCESS;

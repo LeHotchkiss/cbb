@@ -24,18 +24,18 @@ if [ $? -ne 0 ]; then
 fi
 
 cd ..
-mv ./cml-lang/libcml.a ./libs/libcml.a
-rm ./cml-lang/libcml.so
+mv ./cml-lang/libcml.a ./libs/libcml.a > /dev/null 2>&1
+rm ./cml-lang/libcml.so > /dev/null 2>&1
 
 echo "Building CBB..."
 
-rm -r ./.obj
-mkdir ./.obj
+rm -r ./.obj > /dev/null 2>&1
+mkdir ./.obj > /dev/null 2>&1
 
 cd src
 
 for FILE in $(find . -maxdepth 1 -name "*.cpp"); do
-    g++ -std=c++17 -O2 -c $FILE -o "../.obj/$FILE.o" -I "../src" -I"../cml-lang/include" -I"../cml-lang/hotchlib/include"
+    g++ -std=c++17 -O2 -c $FILE -o "../.obj/$FILE.o" -I "../src" -I"../cml-lang/include" -I"../cml-lang/hotchlib/include" -I"../cml-lang"
 
     if [ $? -ne 0 ]; then
         echo "Compilation failed"
@@ -47,4 +47,7 @@ cd ..
 
 g++ $(find ./.obj -name "*.o") -o cbb -L"./libs" -l"cml" -l"hotch"
 
-rm -r ./.obj
+rm -r ./.obj > /dev/null 2>&1
+
+echo "Done!"
+./cbb -v

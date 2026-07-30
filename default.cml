@@ -1,0 +1,94 @@
+version 100
+
+base_target {
+    depends []
+
+    pwd ""
+    class "exe"
+
+    includes [ ]
+    source [ ]
+    lib [ ]
+
+    link [ ]
+    link_shared [ ]
+
+    cc_args ["-std=c++17"]
+    ld_args [ ]
+
+    out "test"
+}
+
+targets {
+    hotchlib {
+        #concat "base_target"
+
+        pwd "cml-lang/hotchlib"
+        class "static"
+
+        includes [
+            "include" "src"
+        ]
+
+        source [
+            "src/*.cpp"
+        ]
+
+        out "../../libs"
+    }
+
+    cml {
+        #concat "base_target"
+
+        depends ["hotchlib"]
+
+        pwd "cml-lang"
+        class "static"
+
+        includes [
+            "include" "src" "hotchlib/include"
+        ]
+
+        source [
+            "src/*.cpp"
+        ]
+
+        lib [
+            "../libs"
+        ]
+
+        link [ "libhotch.a" ]
+
+        out "../libs"
+    }
+
+    cbb {
+        #concat "base_target"
+
+        depends [ "hotchlib" "cml" ]
+
+        pwd ""
+        class "exe"
+
+        includes [
+            "."
+            "src"
+            "cml-lang/include"
+            "cml-lang/hotchlib/include"
+        ]
+
+        source [
+            "src/*.cpp"
+        ]
+
+        lib [
+            "libs"
+        ]
+
+        link [
+            "libcml.a" "libhotch.a"
+        ]
+
+        out "test"
+    }
+}

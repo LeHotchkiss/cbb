@@ -3,7 +3,8 @@
 
 enum {
     RET_SUCCESS = 0,
-    RET_BAD_ARGS
+    RET_BAD_ARGS,
+    RET_BAD_CML
 };
 
 #endif
