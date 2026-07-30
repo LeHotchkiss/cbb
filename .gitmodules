@@ -1,3 +1,4 @@
 [submodule "cml-lang"]
 	path = cml-lang
 	url = https://github.com/LeHotchkiss/cml-lang.git
+	branch = master
