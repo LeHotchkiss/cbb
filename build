@@ -1,18 +1,5 @@
 #!/bin/sh
 
-echo "Building Hotchlib..."
-
-cd ./cml-lang/hotchlib
-./build-static
-
-if [ $? -ne 0 ]; then
-    echo "Hotchlib build failed"
-    exit 1
-fi
-
-cd ../..
-mv ./cml-lang/hotchlib/libhotch.a ./libs/libhotch.a
-
 echo "Building CML..."
 
 cd ./cml-lang
@@ -35,7 +22,7 @@ mkdir ./.obj > /dev/null 2>&1
 cd src
 
 for FILE in $(find . -maxdepth 1 -name "*.cpp"); do
-    g++ -std=c++17 -O2 -c $FILE -o "../.obj/$FILE.o" -I "../src" -I"../cml-lang/include" -I"../cml-lang/hotchlib/include" -I"../cml-lang"
+    g++ -std=c++17 -fno-exceptions -g3 -c $FILE -o "../.obj/$FILE.o" -I "../src" -I"../cml-lang/include" -I"../cml-lang/hotchlib/include" -I"../cml-lang"
 
     if [ $? -ne 0 ]; then
         echo "Compilation failed"

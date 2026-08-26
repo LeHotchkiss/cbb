@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "hlib/Array.h"
 #include "hlib/String.h"
@@ -7,16 +8,18 @@
 #include "CML.h"
 
 #include "codes.h"
+#include "utils.h"
 
 #define CBB_DEFAULT_PROJECT     ("default.cml")
 #define CBB_VERSION             ("1.0.0")
 
-struct {
-    char* projectFile = (char*)CBB_DEFAULT_PROJECT;
-    bool force = false;
-
-    hlib::CArray<hlib::CConstString> targets;
-} g_cvars;
+cbb_state_t g_cvars = {
+    (char*)CBB_DEFAULT_PROJECT,
+    false,
+    false,
+    false,
+    false
+};
 
 #define CMP(_s, _ls) (strcmp(current, _s) == 0 || strcmp(current, _ls) == 0)
 
@@ -35,16 +38,25 @@ bool ParseCMD(int argc, char** argv) {
 
         } else if( CMP("-f", "--force") ) {
             g_cvars.force = true;
-        }
+            continue;
 
+        } else if( CMP("-a", "--all") ) {
+            g_cvars.buildAll = true;
+            continue;
+
+        } else if( CMP("-c", "--clear") ) {
+            g_cvars.clear = true;
+            return true;
+        }
+        
         // Options requireing an argument
 
         if(next) {
-            if( CMP("-a", "--add-target") ) {
-                g_cvars.targets.PushBack(next);
+            if( CMP("-t", "--add-target") ) {
+                g_cvars.targetsRequest.PushBack(next);
                 i++; continue;
 
-            } else if( CMP("-p", "--project-file") ) {
+            } else if( CMP("-p", "--project") ) {
                 g_cvars.projectFile = (char*)next;
                 i++; continue;
             }
@@ -59,6 +71,11 @@ bool ParseCMD(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
+    if(!SetupProject()) {
+        puts("Failed to setup project directory");
+        exit(RET_PROJ_FAIL);
+    }
+
     bool result = ParseCMD(argc, argv);
     if(result != true) {
         exit(RET_BAD_ARGS);
@@ -66,11 +83,16 @@ int main(int argc, char** argv) {
 
     printf("Working with '%s'\n", g_cvars.projectFile);
 
-    if( g_cvars.targets.Length() > 0 ) {
-        g_cvars.targets.Shrink();
+    if( g_cvars.clear ) {
+        printf("Clearing cache... %s\n", ClearCache() ? "Done" : "Failed" );
+        exit(RET_SUCCESS);
+    }
+
+    if( g_cvars.targetsRequest.Length() > 0 ) {
+        g_cvars.targetsRequest.Shrink();
         puts("Targets: ");
-        for(int i = 0; i < g_cvars.targets.Length(); i++) {
-            printf("\t+ %s\n", g_cvars.targets[i]);
+        for(int i = 0; i < g_cvars.targetsRequest.Length(); i++) {
+            printf("\t+ %s\n", g_cvars.targetsRequest[i]);
         }
 
     } else {
@@ -80,16 +102,45 @@ int main(int argc, char** argv) {
 
     cml::CTextParser parser;
 
-    cml::ETextError code = parser.Parse(g_cvars.projectFile, false);
+    cml::ETextError code = parser.Parse(g_cvars.projectFile, true);
 
     if(code != cml::ETextError::Ok) {
-        char buff[128];
+        char buff[64];
         parser.FormatError(code, buff, sizeof(buff));
         puts(buff);
         exit(RET_BAD_CML);
-    } else {
-        cml::PrintObject(parser.Root());
     }
+
+    cml::CObject targetsTable = parser["targets"];
+
+    if(!targetsTable) {
+        printf("ERROR: project file does not have any targets defined\n");
+        exit(RET_BAD_CML);
+    }
+
+    if(targetsTable.Class() != cml::EObjectClass::Object) {
+        printf("ERROR: 'targets' field must be a table\n");
+        exit(RET_BAD_CML);
+    }
+
+    g_cvars.targets = targetsTable;
+
+    for(size_t i = 0; i < g_cvars.targetsRequest.Length(); i++) {
+        hlib::CConstString sName = g_cvars.targetsRequest[i];
+        cml::CObject target = g_cvars.targets[sName.String()];
+
+        if(target.Class() != cml::EObjectClass::Object) {
+            printf("ERROR: target '%s' is not a table\n", sName);
+            exit(RET_BAD_CML);
+        }
+
+        if(!DoTarget(sName, target) && !g_cvars.ignoreErrors) {
+            printf("Failed to build target\n");
+            exit(RET_TARGET_ERROR);
+        }
+    }
+
+    puts("Done");
 
     return RET_SUCCESS;
 }

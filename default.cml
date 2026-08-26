@@ -21,7 +21,7 @@ base_target {
 
 targets {
     hotchlib {
-        #concat "base_target"
+        concat "base_target"
 
         pwd "cml-lang/hotchlib"
         class "static"
@@ -31,14 +31,14 @@ targets {
         ]
 
         source [
-            "src/*.cpp"
+            "cml-lang/hotchlib/src/*.cpp"
         ]
 
         out "../../libs"
     }
 
     cml {
-        #concat "base_target"
+        concat "base_target"
 
         depends ["hotchlib"]
 
@@ -50,7 +50,7 @@ targets {
         ]
 
         source [
-            "src/*.cpp"
+            "cml-lang/src/*.cpp"
         ]
 
         lib [
@@ -63,7 +63,7 @@ targets {
     }
 
     cbb {
-        #concat "base_target"
+        concat "base_target"
 
         depends [ "hotchlib" "cml" ]
 
