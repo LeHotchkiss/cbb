@@ -55,8 +55,13 @@ bool ParseCMD(int argc, char** argv) {
             } else if( CMP("-p", "--project") ) {
                 g_cvars.projectFile = (char*)next;
                 i++; continue;
+
             } else if( strcmp(current, "--add-tabs") == 0 ) {
                 g_cvars.addTabs = atoi(next);
+                i++; continue;
+
+            } else if( CMP("-o", "--output") ) {
+                g_cvars.verbosity = atoi(next);
                 i++; continue;
             }
 
@@ -88,19 +93,6 @@ int main(int argc, char** argv) {
 
     if( g_cvars.clear ) {
         Print(ECode::Info, "Clearing cache... %s\n", ClearCache() ? "Done" : "Failed" );
-        exit(RET_SUCCESS);
-    }
-
-    if( g_cvars.targetsRequest.Length() > 0 ) {
-        g_cvars.targetsRequest.Shrink();
-        Print(ECode::Info, "%s\n", "Targets:");
-        for(int i = 0; i < g_cvars.targetsRequest.Length(); i++) {
-            Print(ECode::Info, "\t+ %s\n", g_cvars.targetsRequest[i]);
-        }
-        
-    } else {
-        Print(ECode::Info, "%s\n", "Nothing to do");
-        exit(RET_SUCCESS);
     }
 
     cml::CTextParser parser;
@@ -116,7 +108,7 @@ int main(int argc, char** argv) {
 
     cml::CObject targetsTable = parser["targets"];
 
-    if(!targetsTable) {
+    if(targetsTable = cml::NIL) {
         Print(ECode::Error, "%s\n", "Project file does not have any targets defined");
         exit(RET_BAD_CML);
     }
@@ -127,6 +119,22 @@ int main(int argc, char** argv) {
     }
 
     g_cvars.targets = targetsTable;
+
+    if(g_cvars.buildAll) {
+        
+    }
+
+    if( g_cvars.targetsRequest.Length() > 0 ) {
+        g_cvars.targetsRequest.Shrink();
+        Print(ECode::Info, "%s\n", "Targets:");
+        for(int i = 0; i < g_cvars.targetsRequest.Length(); i++) {
+            Print(ECode::Info, "\t+ %s\n", g_cvars.targetsRequest[i]);
+        }
+        
+    } else {
+        Print(ECode::Info, "%s\n", "Nothing to do");
+        exit(RET_SUCCESS);
+    }
 
     for(size_t i = 0; i < g_cvars.targetsRequest.Length(); i++) {
         hlib::CConstString sName = g_cvars.targetsRequest[i];

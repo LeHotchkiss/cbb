@@ -24,6 +24,7 @@ extern struct cbb_state_t {
     bool clear          = false;
     bool ignoreErrors   = false;
     int addTabs         = 0;
+    int verbosity       = 1;
 
     cml::string_t gccPrefix;
 

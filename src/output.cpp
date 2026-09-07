@@ -11,12 +11,13 @@ Setups working directory automatically if needed.\n\
 Arguments are:\n\
     [-p / --project]    <path-to-cml>   -   specify what project file to read, defaults to 'default.cml'\n\
     [-t / --add-target] <target-name>   -   add said target to the queue\n\
-    --add-tabs          <N>             -   prefix all console output wuth N tabulations\n\
+    --add-tabs          <N>             -   prefix all console output line with N tabulations\n\
     [-f / --force]                      -   ignore cache and rebuild forcefully\n\
     [-c / --clear]                      -   clear the cache and exit\n\
     [-a / --all]                        -   add all targets in the project to the queue\n\
     [-v / --version]                    -   print CBB version and exit\n\
-    [-h / --help]                       -   print this message and exit\n";
+    [-h / --help]                       -   print this message and exit\n\
+    [-o / --output]     <0-2>           -   set the verbosiry level with 0 being complete silence and 2 violently toching your terminal";
 
 void PutTabs(FILE* file) {
     for(int i = 0; i < g_cvars.addTabs; i++) {
