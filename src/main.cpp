@@ -9,17 +9,9 @@
 
 #include "codes.h"
 #include "utils.h"
+#include "output.h"
 
-#define CBB_DEFAULT_PROJECT     ("default.cml")
-#define CBB_VERSION             ("1.0.0")
-
-cbb_state_t g_cvars = {
-    (char*)CBB_DEFAULT_PROJECT,
-    false,
-    false,
-    false,
-    false
-};
+cbb_state_t g_cvars;
 
 #define CMP(_s, _ls) (strcmp(current, _s) == 0 || strcmp(current, _ls) == 0)
 
@@ -33,7 +25,7 @@ bool ParseCMD(int argc, char** argv) {
         // Options without arguments
 
         if( CMP("-v", "--version") ) {
-            printf("CBB v %s\n", CBB_VERSION);
+            Print(ECode::Info, "CBB v %s\n", CBB_VERSION);
             exit(RET_SUCCESS);
 
         } else if( CMP("-f", "--force") ) {
@@ -47,9 +39,13 @@ bool ParseCMD(int argc, char** argv) {
         } else if( CMP("-c", "--clear") ) {
             g_cvars.clear = true;
             return true;
+
+        } else if( CMP("-h", "--help") ) {
+            Print(ECode::Info, "%s\n", g_sHelpString);
+            exit(RET_SUCCESS);
         }
         
-        // Options requireing an argument
+        // Options with an argument
 
         if(next) {
             if( CMP("-t", "--add-target") ) {
@@ -59,10 +55,13 @@ bool ParseCMD(int argc, char** argv) {
             } else if( CMP("-p", "--project") ) {
                 g_cvars.projectFile = (char*)next;
                 i++; continue;
+            } else if( strcmp(current, "--add-tabs") == 0 ) {
+                g_cvars.addTabs = atoi(next);
+                i++; continue;
             }
 
         } else {
-            fprintf(stderr, "ERROR: option '%s' requires an argument\n", current);
+            Print(ECode::Error, "ERROR: option '%s' requires an argument\n", current);
             return false;
         }
     }
@@ -72,7 +71,7 @@ bool ParseCMD(int argc, char** argv) {
 
 int main(int argc, char** argv) {
     if(!SetupProject()) {
-        puts("Failed to setup project directory");
+        Print(ECode::Error, "%s\n", "Failed to setup project directory");
         exit(RET_PROJ_FAIL);
     }
 
@@ -81,22 +80,26 @@ int main(int argc, char** argv) {
         exit(RET_BAD_ARGS);
     }
 
-    printf("Working with '%s'\n", g_cvars.projectFile);
+    for(size_t i = 0; i < g_cvars.addTabs; i++) {
+        g_cvars.gccPrefix += '\t';
+    }
+
+    Print(ECode::Info, "Working with project '%s'\n", g_cvars.projectFile);
 
     if( g_cvars.clear ) {
-        printf("Clearing cache... %s\n", ClearCache() ? "Done" : "Failed" );
+        Print(ECode::Info, "Clearing cache... %s\n", ClearCache() ? "Done" : "Failed" );
         exit(RET_SUCCESS);
     }
 
     if( g_cvars.targetsRequest.Length() > 0 ) {
         g_cvars.targetsRequest.Shrink();
-        puts("Targets: ");
+        Print(ECode::Info, "%s\n", "Targets:");
         for(int i = 0; i < g_cvars.targetsRequest.Length(); i++) {
-            printf("\t+ %s\n", g_cvars.targetsRequest[i]);
+            Print(ECode::Info, "\t+ %s\n", g_cvars.targetsRequest[i]);
         }
-
+        
     } else {
-        printf("Nothing to do\n");
+        Print(ECode::Info, "%s\n", "Nothing to do");
         exit(RET_SUCCESS);
     }
 
@@ -114,12 +117,12 @@ int main(int argc, char** argv) {
     cml::CObject targetsTable = parser["targets"];
 
     if(!targetsTable) {
-        printf("ERROR: project file does not have any targets defined\n");
+        Print(ECode::Error, "%s\n", "Project file does not have any targets defined");
         exit(RET_BAD_CML);
     }
 
     if(targetsTable.Class() != cml::EObjectClass::Object) {
-        printf("ERROR: 'targets' field must be a table\n");
+        Print(ECode::Error, "%s\n", "'targets' field must be a table");
         exit(RET_BAD_CML);
     }
 
@@ -130,17 +133,17 @@ int main(int argc, char** argv) {
         cml::CObject target = g_cvars.targets[sName.String()];
 
         if(target.Class() != cml::EObjectClass::Object) {
-            printf("ERROR: target '%s' is not a table\n", sName);
+            Print(ECode::Error, "Target '%s' is not a table\n", sName);
             exit(RET_BAD_CML);
         }
 
         if(!DoTarget(sName, target) && !g_cvars.ignoreErrors) {
-            printf("Failed to build target\n");
+            Print(ECode::Error, "%s\n", "Failed to build target");
             exit(RET_TARGET_ERROR);
         }
     }
 
-    puts("Done");
+    Print(ECode::Info, "%s\n", "Done");
 
     return RET_SUCCESS;
 }

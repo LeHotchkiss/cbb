@@ -2,13 +2,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "hlib/String.h"
 
 #if defined(CBB_LINUX)
     #include <glob.h>
+    #include <sys/stat.h>
+    #include <unistd.h>
 #elif defined(CBB_WINDOWS)
-
+    #include <windows.h>
 #endif
 
 bool SetupProject() {
@@ -38,16 +41,33 @@ bool ClearCache() {
 }
 
 size_t GetCacheFileName(const char* sFile, char* sBuffer, size_t iBuffSize) {
-    static char buff[128];
+    char buff[128];
+    char nameBuff[256];
+    
     strncpy(buff, g_cvars.projectFile, sizeof(buff));
+    strncpy(nameBuff, sFile, sizeof(nameBuff));
 
     for(int i = 0; i < sizeof(buff) - 1; i++) {
+        if(buff[i] == '\0') {
+            break;
+        }
+
         if( buff[i] == '.' || buff[i] == '/' ) {
             buff[i] = '_';
         }
     }
 
-    return snprintf(sBuffer, iBuffSize, "%s_%s.cache", buff, sFile);
+    for(int i = 0; i < sizeof(nameBuff) - 1; i++) {
+        if(nameBuff[i] == '\0') {
+            break;
+        }
+
+        if( nameBuff[i] == '.' || nameBuff[i] == '/' ) {
+            nameBuff[i] = '_';
+        }
+    }
+
+    return snprintf(sBuffer, iBuffSize, ".cbb/%s_%s.cache", buff, nameBuff);
 }
 
 void ResolveFileMask(cml::array_t<cml::string_t>& filesArray, const char* sPath) {
@@ -70,4 +90,93 @@ void ResolveFileMask(cml::array_t<cml::string_t>& filesArray, const char* sPath)
     #elif defined(CBB_WINDOWS)
 
     #endif
+}
+
+size_t GetFileModifTime(const char* sFile) {
+    #if defined(CBB_LINUX)
+        struct stat fileInfo;
+        int code = stat(sFile, &fileInfo);
+
+        if(code < 0) {
+            return 0;
+        }
+
+        return fileInfo.st_mtim.tv_sec;
+    #elif defined(CBB_WINDOWS)
+
+    #endif
+}
+
+size_t GetFileCachedTime(const char* sFile) {
+    char buff[256];
+
+    GetCacheFileName(sFile, buff, sizeof(buff));
+
+    FILE* cache = fopen(buff, "rb");
+
+    if(cache == NULL) {
+        return (size_t)(-1);
+    }
+
+    fgets(buff, sizeof(buff), cache);
+
+    fclose(cache);
+
+    return strtol(buff, NULL, 10);
+}
+
+void CacheFile(const char* sFile) {
+    char buff[256];
+    GetCacheFileName(sFile, buff, sizeof(buff));
+
+    time_t now = GetFileModifTime(sFile);
+
+    FILE* cache = fopen(buff, "wb");
+    if(cache == NULL) { return; }
+
+    fprintf(cache, "%zd\n", now);
+    fclose(cache);
+}
+
+size_t GetObjectFileName(const char* sFile, char* sBuffer, size_t iBuffSize) {
+    char buff[256];
+    char nameBuff[128];
+
+    strncpy(buff, sFile, sizeof(buff));
+    strncpy(nameBuff, g_cvars.projectFile, sizeof(nameBuff));
+
+    for(size_t i = 0; i < sizeof(buff); i++) {
+        if(buff[i] == '\0') {
+            break;
+        }
+
+        if(buff[i] == '.' || buff[i] == '/') {
+            buff[i] = '_';
+        }
+    }
+
+    for(size_t i = 0; i < sizeof(nameBuff); i++) {
+        if(nameBuff[i] == '\0') {
+            break;
+        }
+
+        if(nameBuff[i] == '.' || nameBuff[i] == '/') {
+            nameBuff[i] = '_';
+        }
+    }
+
+    return snprintf(sBuffer, iBuffSize, ".cbb/obj/%s_%s.o", nameBuff, buff);
+}
+
+int SetPWD(const char* sPath) {
+    int code;
+    char buff[512];
+    #if defined(CBB_LINUX)
+        snprintf(buff, sizeof(buff), "./%s", sPath);
+        code = chdir(buff);
+    #elif defined(CBB_WINDOWS)
+        snprintf(buff, sizeof(buff), "cd \"%s\"", sPath);
+    #endif
+
+    return code;
 }

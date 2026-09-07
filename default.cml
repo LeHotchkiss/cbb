@@ -1,78 +1,53 @@
 version 100
 
-base_target {
-    depends []
+cbb {
+    base {
+        depends []          # project-local dependencies
+        depends_ex []       # external dependencies
 
-    pwd ""
-    class "exe"
+        class "exe"
 
-    includes [ ]
-    source [ ]
-    lib [ ]
+        includes [ ]
+        source [ ]
+        lib [ ]
 
-    link [ ]
-    link_shared [ ]
+        link [ ]
+        link_shared [ ]
 
-    cc_args ["-std=c++17"]
-    ld_args [ ]
+        compiler "g++"
 
-    out "test"
+        cc_args ["-std=c++17" "-fno-exceptions"]
+        ld_args [ ]
+
+        out "test"
+    }
+
+    debug {
+        cc_args ["-g3"]
+    }
+
+    debug {
+        cc_args ["-O2"]
+    }
 }
 
 targets {
-    hotchlib {
-        concat "base_target"
-
-        pwd "cml-lang/hotchlib"
-        class "static"
-
-        includes [
-            "include" "src"
-        ]
-
-        source [
-            "cml-lang/hotchlib/src/*.cpp"
-        ]
-
-        out "../../libs"
-    }
-
-    cml {
-        concat "base_target"
-
-        depends ["hotchlib"]
-
-        pwd "cml-lang"
-        class "static"
-
-        includes [
-            "include" "src" "hotchlib/include"
-        ]
-
-        source [
-            "cml-lang/src/*.cpp"
-        ]
-
-        lib [
-            "../libs"
-        ]
-
-        link [ "libhotch.a" ]
-
-        out "../libs"
-    }
-
     cbb {
-        concat "base_target"
+        concat "cbb.base"
 
-        depends [ "hotchlib" "cml" ]
+        depends_ex [
+            {
+                path "cml-lang/project.cml"
+                target "cml_lang"
+            }
+        ]
 
-        pwd ""
         class "exe"
 
         includes [
             "."
             "src"
+            "cml-lang"
             "cml-lang/include"
             "cml-lang/hotchlib/include"
         ]
@@ -82,13 +57,15 @@ targets {
         ]
 
         lib [
-            "libs"
+            "cml-lang"
+            "cml-lang/hotchlib"
         ]
 
         link [
-            "libcml.a" "libhotch.a"
+            "libcml.a"
+            "libhotch.a"
         ]
 
-        out "test"
+        out "cbb_test"
     }
 }

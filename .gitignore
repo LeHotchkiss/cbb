@@ -1,3 +1,5 @@
 cbb
-libs/*
-
+cbb_test
+*.a
+*.so
+.cbb
