@@ -37,7 +37,7 @@ targets {
 
         depends_ex [
             {
-                path "cml-lang/project.cml"
+                path "cml-lang/cml_lang.cml"
                 target "cml_lang"
             }
         ]

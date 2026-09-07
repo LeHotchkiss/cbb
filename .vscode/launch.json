@@ -9,7 +9,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/cbb",
-        "args": ["-t", "cbb", "-f"],
+        "args": ["-t", "cbb", "-f", "-p", "cbb.cml"],
         "stopAtEntry": false,
         "cwd": "/home/hotchkiss/cpp/cbb",
         "environment": [],

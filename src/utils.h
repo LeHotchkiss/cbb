@@ -27,9 +27,7 @@ extern struct cbb_state_t {
     int verbosity       = 1;
 
     cml::string_t gccPrefix;
-
     cml::table_t<hlib::CConstString, bool> targetsStatus;
-
     cml::array_t<hlib::CConstString> targetsRequest;
     cml::CObject targets;
 } g_cvars;

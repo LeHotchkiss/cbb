@@ -126,6 +126,9 @@ bool DoTarget(const char* sName, cml::CObject pData) {
         time_t fileTimeCache = GetFileCachedTime(sPath);
         time_t fileTimeReal = GetFileModifTime(sPath);
 
+        GetObjectFileName(sPath, sObjBuff, sizeof(sObjBuff));
+        objectFiles.PushBack(sObjBuff);
+
         if( fileTimeCache != fileTimeReal || g_cvars.force ) {
             Print(ECode::Info, "%s", "\n");
             Print(ECode::Info, "\tFile: '%s'\n", sPath);
@@ -141,10 +144,6 @@ bool DoTarget(const char* sName, cml::CObject pData) {
 
             ProduceList(sCommand, pData, "cc_args", "%s ");
             ProduceList(sCommand, pData, "includes", "-I\"%s\" ");
-
-            GetObjectFileName(sPath, sObjBuff, sizeof(sObjBuff));
-
-            objectFiles.PushBack(sObjBuff);
 
             sCommand.PushFormatted("-o \"%s\"", sObjBuff);
 

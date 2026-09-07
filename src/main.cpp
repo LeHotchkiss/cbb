@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 
     cml::CObject targetsTable = parser["targets"];
 
-    if(targetsTable = cml::NIL) {
+    if(targetsTable == cml::NIL) {
         Print(ECode::Error, "%s\n", "Project file does not have any targets defined");
         exit(RET_BAD_CML);
     }
@@ -121,7 +121,9 @@ int main(int argc, char** argv) {
     g_cvars.targets = targetsTable;
 
     if(g_cvars.buildAll) {
-        
+        for(size_t i = 0; i < targetsTable.Length(); i++) {
+            g_cvars.targetsRequest.PushBack( targetsTable.IndexName(i) );
+        }
     }
 
     if( g_cvars.targetsRequest.Length() > 0 ) {
