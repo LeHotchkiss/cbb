@@ -1,0 +1,10 @@
+C/C++ project builder
+
+Made myself for me and those fellas who also hate CM*ke and m*ke.
+Usage example can be seen in the source files themselves - the CBB
+can be built by itself after the initial bootstrap.
+
+INSTALLATION
+
+To bootstrap, just run the "build" script. Right now, only GCC+Linux
+pair is supported, but W*ndows version will come later.
