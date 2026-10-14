@@ -162,7 +162,7 @@ bool DoTarget(const char* sName, cml::CObject pData) {
         GetObjectFileName(sPath, sObjBuff, sizeof(sObjBuff));
         objectFiles.PushBack(sObjBuff);
 
-        if( needsCompile > 0 ) {
+        if( needsCompile > 0 || g_cvars.force ) {
             Print(ECode::Spam, "%s", "\n");
             Print(ECode::Info, "\tFile: '%s'\n", sPath);
 
@@ -241,9 +241,10 @@ bool DoTarget(const char* sName, cml::CObject pData) {
 
     if(code == 0) {
         g_cvars.targetsStatus[sName] = true;
+        return true;
+    } else {
+        return false;
     }
-
-    return true;
 }
 
 bool ResolveExternalDeps(cml::CObject pData) {

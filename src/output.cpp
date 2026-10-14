@@ -17,7 +17,7 @@ Arguments are:\n\
     [-a / --all]                        -   add all targets in the project to the queue\n\
     [-v / --version]                    -   print CBB version and exit\n\
     [-h / --help]                       -   print this message and exit\n\
-    [-o / --output]     <0-2>           -   set the verbosiry level with 0 being complete silence and 2 violently toching your terminal\n\
+    [-o / --output]     <0-2>           -   set the verbosiry level with 0 being complete silence and 2 violently touching your terminal\n\
     [-i / --no-headers]                 -   don`t check whether the included headers have changed";
 
 void PutTabs(FILE* file) {
@@ -27,7 +27,10 @@ void PutTabs(FILE* file) {
 }
 
 void Print(ECode iCode, const char* sFormat, ...) {
-    //if((int)iCode < g_cvars.verbosity) { return; }
+    const int verbosity = g_cvars.verbosity;
+    if (verbosity <= 0 || (int)iCode < 4 - verbosity) {
+        return;
+    }
 
     FILE* pOut = (iCode == ECode::Error) ? stderr : stdout;
 

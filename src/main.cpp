@@ -38,11 +38,14 @@ bool ParseCMD(int argc, char** argv) {
 
         } else if( CMP("-c", "--clear") ) {
             g_cvars.clear = true;
-            return true;
+            exit(RET_SUCCESS);
 
         } else if( CMP("-h", "--help") ) {
-            Print(ECode::Info, "%s\n", g_sHelpString);
+            puts(g_sHelpString);
             exit(RET_SUCCESS);
+        } else if ( CMP("-i", "--no-headers") ) {
+            g_cvars.ignoreHeaders = true;
+            continue;
         }
         
         // Options with an argument
@@ -61,7 +64,8 @@ bool ParseCMD(int argc, char** argv) {
                 i++; continue;
 
             } else if( CMP("-o", "--output") ) {
-                g_cvars.verbosity = atoi(next);
+                int v = atoi(next);
+                g_cvars.verbosity = (v < 0) ? 0 : ((v > 3) ? 3 : v);
                 i++; continue;
             }
 
