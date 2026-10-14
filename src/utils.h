@@ -25,6 +25,7 @@ extern struct cbb_state_t {
     bool ignoreErrors   = false;
     int addTabs         = 0;
     int verbosity       = 1;
+    bool ignoreHeaders  = false;
 
     cml::string_t gccPrefix;
     cml::table_t<hlib::CConstString, bool> targetsStatus;
@@ -49,5 +50,9 @@ void ResolveFileMask(cml::array_t<cml::string_t>& filesArray, const char* sPath)
 bool DoTarget(const char* sName, cml::CObject pData);
 
 int SetPWD(const char* sPath);
+
+void ScanIncludes(cml::table_t<cml::string_t, bool>& filesReg, cml::CObject pIncludes, const char* sPath, bool isHeader);
+
+cml::string_t GetAbsolutePath(const char*);
 
 #endif

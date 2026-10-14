@@ -66,13 +66,17 @@ bool ParseCMD(int argc, char** argv) {
             }
 
         } else {
-            Print(ECode::Error, "ERROR: option '%s' requires an argument\n", current);
+            Print(ECode::Error, "Option '%s' requires an argument\n", current);
             return false;
         }
     }
 
     return true;
 }
+
+//#define TEST
+
+#ifndef TEST
 
 int main(int argc, char** argv) {
     if(!SetupProject()) {
@@ -89,7 +93,7 @@ int main(int argc, char** argv) {
         g_cvars.gccPrefix += '\t';
     }
 
-    Print(ECode::Info, "Working with project '%s'\n", g_cvars.projectFile);
+    Print(ECode::Spam, "Working with project '%s'\n", g_cvars.projectFile);
 
     if( g_cvars.clear ) {
         Print(ECode::Info, "Clearing cache... %s\n", ClearCache() ? "Done" : "Failed" );
@@ -157,3 +161,25 @@ int main(int argc, char** argv) {
 
     return RET_SUCCESS;
 }
+
+#else 
+
+int main(int argc, char** argv) {
+    using namespace cml;
+
+    table_t<string_t, bool> filesReg;
+
+    char buff[128];
+
+    while(1) {
+        memset(buff, 0, sizeof(buff));
+        scanf("%s", buff);
+
+        string_t absPath = GetAbsolutePath(buff);
+        printf("-> '%s'\n", absPath.String());
+    }
+
+    return 0;
+}
+
+#endif

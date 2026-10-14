@@ -26,19 +26,19 @@ cbb {
         cc_args ["-g3"]
     }
 
-    debug {
+    release {
         cc_args ["-O2"]
     }
 }
 
 targets {
-    cbb {
+    main {
         concat "cbb.base"
 
         depends_ex [
             {
                 path "cml-lang/cml_lang.cml"
-                target "cml_lang"
+                target "main"
             }
         ]
 

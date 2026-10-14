@@ -9,10 +9,10 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/cbb",
-        "args": ["-t", "cbb", "-f", "-p", "cbb.cml"],
+        "args": ["-p", "test.cml", "-a"],
         "stopAtEntry": false,
         "cwd": "/home/hotchkiss/cpp/cbb",
-        "environment": [],
+        "environment": [ {"name" : "PATH", "value" : "/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/lib/jvm/default/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/home/hotchkiss/path:/home/hotchkiss/cpp/cbb"} ],
         "externalConsole": false,
         "MIMode": "gdb",
         "setupCommands": [

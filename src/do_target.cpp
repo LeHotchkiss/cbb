@@ -39,17 +39,24 @@ bool ProduceList(cml::string_t& sCommand, cml::CObject pData, const char* sName,
 
 bool ResolveExternalDeps(cml::CObject pData);
 
+bool NeedsCompiling(const char* sPath) {
+    time_t fileTimeCache = GetFileCachedTime(sPath);
+    time_t fileTimeReal = GetFileModifTime(sPath);
+
+    return (fileTimeCache != fileTimeReal || g_cvars.force);
+}
+
 bool DoTarget(const char* sName, cml::CObject pData) {
     using namespace cml;
 
     if( TargetDone(sName) ) {
-        Print(ECode::Info, "Target '%s' is already done, skipping...\n", sName);
+        Print(ECode::Spam, "Target '%s' is already done, skipping...\n", sName);
         return true;
     }
     
     Print(ECode::Info, "Working on: '%s'\n", sName);
 
-    Print(ECode::Info, "Resolving external dependencies...\n");
+    Print(ECode::Spam, "Resolving external dependencies...\n");
 
     if(!ResolveExternalDeps(pData)) {
         return false;
@@ -59,7 +66,7 @@ bool DoTarget(const char* sName, cml::CObject pData) {
 
     if(pDepends != NIL) {
         if(pDepends.Class() == EObjectClass::Array) {
-            Print(ECode::Info, "%s%s", "Resolving local dependencies...", (pDepends.Length() > 0) ? "\n" : " None\n");
+            Print(ECode::Spam, "%s%s", "Resolving local dependencies...", (pDepends.Length() > 0) ? "\n" : " None\n");
 
             for( size_t i = 0; i < pDepends.Length(); i++ ) {
                 CObject pCurrent = pDepends.Index(i);
@@ -120,49 +127,84 @@ bool DoTarget(const char* sName, cml::CObject pData) {
 
     char sObjBuff[256];
 
+    CObject compiler = pData["compiler"];
+    const char* sCompiler = compiler ? compiler.AsString() : "g++";
+
+    table_t<string_t, bool> includesReg;
+    table_t<string_t, bool> changedHeaders;
+
+    CObject pIncludes = pData["includes"];
+
+    bool failed = false;
+
     for(size_t i = 0; i < aFiles.Length(); i++) {
+        includesReg.Clear();
         const char* sPath = aFiles[i].String();
 
-        time_t fileTimeCache = GetFileCachedTime(sPath);
-        time_t fileTimeReal = GetFileModifTime(sPath);
+        int needsCompile = 0;
+
+        ScanIncludes(includesReg, pIncludes, sPath, false);
+
+        for(size_t k = 0; k < includesReg.Length(); k++) {
+            const char* headerPath = includesReg.IndexKey(k);
+
+            if (NeedsCompiling(headerPath)) {
+                needsCompile++;
+
+                if (!changedHeaders.HasKey(headerPath)) {
+                    changedHeaders.Insert(headerPath, true);
+                }
+            }
+        }
+
+        needsCompile += NeedsCompiling(sPath);
 
         GetObjectFileName(sPath, sObjBuff, sizeof(sObjBuff));
         objectFiles.PushBack(sObjBuff);
 
-        if( fileTimeCache != fileTimeReal || g_cvars.force ) {
-            Print(ECode::Info, "%s", "\n");
+        if( needsCompile > 0 ) {
+            Print(ECode::Spam, "%s", "\n");
             Print(ECode::Info, "\tFile: '%s'\n", sPath);
 
             bool ok = true;
 
-            string_t sCommand = "g++ ";
-            sCommand.PushFormatted("-c \"%s\" ", sPath);
+            string_t command;
+            
+            command.PushFormatted("%s ", sCompiler);
+            command.PushFormatted("-c \"%s\" ", sPath);
 
             if( strcmp(targetClass, "shared") == 0 ) {
-                sCommand.PushFormatted("%s ", "-fPIC");
+                command.PushFormatted("%s ", "-fPIC");
             }
 
-            ProduceList(sCommand, pData, "cc_args", "%s ");
-            ProduceList(sCommand, pData, "includes", "-I\"%s\" ");
+            ProduceList(command, pData, "cc_args", "%s ");
+            ProduceList(command, pData, "includes", "-I\"%s\" ");
 
-            sCommand.PushFormatted("-o \"%s\"", sObjBuff);
+            command.PushFormatted("-o \"%s\"", sObjBuff);
 
-            Print(ECode::Info, "\t\t %s\n", sCommand.String());
+            Print(ECode::Spam, "\t\t %s\n", command.String());
 
-            //sCommand.PushFormatted("-fdiagnostics-prefix=\"%s\" ", g_cvars.gccPrefix.String());
-
-            int code = system(sCommand.String());
+            int code = system(command.String());
             ok = code == 0;
 
             if(ok) {
                 CacheFile(sPath);
+            } else {
+                failed = true;
             }
         }
     }
 
+    if(!failed) {
+        for (size_t i = 0; i < changedHeaders.Length(); i++) {
+            CacheFile(changedHeaders.IndexKey(i).String());
+        }
+    }
+    
     Print(ECode::Info, "%s\n", "Linking...");
 
     CObject pOutput = pData["out"];
+    int code = -1;
 
     if( pOutput.Class() == EObjectClass::String ) {
         const char* sOutput = pOutput.AsString();
@@ -177,7 +219,7 @@ bool DoTarget(const char* sName, cml::CObject pData) {
                 command.PushFormatted("%s ", objectFiles[i].String());
             }
         } else {
-            command = "g++ ";
+            command.PushFormatted("%s ", sCompiler);
 
             if( strcmp(targetClass, "shared") == 0 ) {
                 command.PushFormatted("%s ", "-shared");
@@ -193,11 +235,13 @@ bool DoTarget(const char* sName, cml::CObject pData) {
             command.PushFormatted(" -o %s", sOutput);
         }
 
-        Print(ECode::Info, "\t%s\n", command.String());
-        int code = system(command.String());
+        Print(ECode::Spam, "\t%s\n", command.String());
+        code = system(command.String());
     }
 
-    g_cvars.targetsStatus[sName] = true;
+    if(code == 0) {
+        g_cvars.targetsStatus[sName] = true;
+    }
 
     return true;
 }
@@ -208,7 +252,7 @@ bool ResolveExternalDeps(cml::CObject pData) {
     CObject pDeps = pData["depends_ex"];
 
     if(pDeps == NIL || pDeps.Class() != EObjectClass::Array) {
-        return false;
+        return true;
     }
 
     for(size_t i = 0; i < pDeps.Length(); i++) {
@@ -246,7 +290,8 @@ bool ResolveExternalDeps(cml::CObject pData) {
             sCommand.PushFormatted(" -f");
         }
 
-        Print(ECode::Info, "\t%s->%s:\n\t\t%s\n", sProject, pTarget.AsString(), sCommand.String());
+        Print(ECode::Spam, "\t%s->%s:\n", sProject, pTarget.AsString());
+        Print(ECode::Spam, "\t\t%s\n", sCommand.String());
         
         code = system(sCommand.String());
 

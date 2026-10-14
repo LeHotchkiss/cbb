@@ -1,0 +1,43 @@
+version 100
+
+cbb {
+    base {
+        depends []          # project-local dependencies
+        depends_ex []       # external dependencies
+
+        class "exe"
+
+        includes [ ]
+        source [ ]
+        lib [ ]
+
+        link [ ]
+        link_shared [ ]
+
+        compiler "g++"
+
+        cc_args ["-std=c++17" "-fno-exceptions"]
+        ld_args [ ]
+
+        out "test"
+    }
+
+    debug {
+        cc_args ["-g3"]
+    }
+
+    release {
+        cc_args ["-O2"]
+    }
+}
+
+targets {
+    main {
+        concat "cbb.base"
+
+        source [ "include_test/test.cpp" ]
+        includes [ "." "include_test" ]
+
+        out "scan_test"
+    }
+}

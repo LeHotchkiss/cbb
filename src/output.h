@@ -4,9 +4,10 @@
 extern const char* g_sHelpString;
 
 enum class ECode {
-    Info        = 0,
-    Warning     = 1,
-    Error       = 2
+    Spam        = 0,
+    Info        = 1,
+    Warning     = 2,
+    Error       = 3
 };
 
 void Print(ECode iCode, const char* sFormat, ...);

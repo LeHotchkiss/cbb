@@ -10,6 +10,7 @@
     #include <glob.h>
     #include <sys/stat.h>
     #include <unistd.h>
+    #include <limits.h>
 #elif defined(CBB_WINDOWS)
     #include <windows.h>
 #endif
@@ -179,4 +180,15 @@ int SetPWD(const char* sPath) {
     #endif
 
     return code;
+}
+
+cml::string_t GetAbsolutePath(const char* path) {
+    #if defined(CBB_LINUX)
+        cml::string_t buff { PATH_MAX };
+        char* test = realpath(path, buff.Pointer());
+        buff.LengthUpdate();
+        return buff;
+    #elif defined(CBB_WINDOWS)
+        static_assert(false, "w*ndows impl");
+    #endif
 }

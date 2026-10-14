@@ -17,7 +17,8 @@ Arguments are:\n\
     [-a / --all]                        -   add all targets in the project to the queue\n\
     [-v / --version]                    -   print CBB version and exit\n\
     [-h / --help]                       -   print this message and exit\n\
-    [-o / --output]     <0-2>           -   set the verbosiry level with 0 being complete silence and 2 violently toching your terminal";
+    [-o / --output]     <0-2>           -   set the verbosiry level with 0 being complete silence and 2 violently toching your terminal\n\
+    [-i / --no-headers]                 -   don`t check whether the included headers have changed";
 
 void PutTabs(FILE* file) {
     for(int i = 0; i < g_cvars.addTabs; i++) {
@@ -26,6 +27,8 @@ void PutTabs(FILE* file) {
 }
 
 void Print(ECode iCode, const char* sFormat, ...) {
+    //if((int)iCode < g_cvars.verbosity) { return; }
+
     FILE* pOut = (iCode == ECode::Error) ? stderr : stdout;
 
     PutTabs(pOut);
@@ -33,7 +36,7 @@ void Print(ECode iCode, const char* sFormat, ...) {
     va_list args;
     va_start(args, sFormat);
 
-    if(iCode != ECode::Info) {
+    if(iCode > ECode::Info) {
         fprintf(pOut, "%s ", (iCode == ECode::Error) ? "[ERROR]" : "[WARNING]");
     }
 
