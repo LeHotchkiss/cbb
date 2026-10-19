@@ -18,7 +18,8 @@ Arguments are:\n\
     [-v / --version]                    -   print CBB version and exit\n\
     [-h / --help]                       -   print this message and exit\n\
     [-o / --output]     <0-2>           -   set the verbosiry level with 0 being complete silence and 2 violently touching your terminal\n\
-    [-i / --no-headers]                 -   don`t check whether the included headers have changed";
+    [-i / --no-headers]                 -   don`t check whether the included headers have changed\n\
+    [-s / --safe]                       -   ignore the execution hooks";
 
 void PutTabs(FILE* file) {
     for(int i = 0; i < g_cvars.addTabs; i++) {
@@ -29,7 +30,7 @@ void PutTabs(FILE* file) {
 void Print(ECode iCode, const char* sFormat, ...) {
     const int verbosity = g_cvars.verbosity;
     if (verbosity <= 0 || (int)iCode < 4 - verbosity) {
-        return;
+        //return;
     }
 
     FILE* pOut = (iCode == ECode::Error) ? stderr : stdout;

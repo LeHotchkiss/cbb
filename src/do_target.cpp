@@ -39,11 +39,35 @@ bool ProduceList(cml::string_t& sCommand, cml::CObject pData, const char* sName,
 
 bool ResolveExternalDeps(cml::CObject pData);
 
-bool NeedsCompiling(const char* sPath) {
-    time_t fileTimeCache = GetFileCachedTime(sPath);
-    time_t fileTimeReal = GetFileModifTime(sPath);
+bool NeedsCompiling(const char* path) {
+    time_t fileTimeCache = GetFileCachedTime(path);
+    time_t fileTimeReal = GetFileModifTime(path);
 
     return (fileTimeCache != fileTimeReal || g_cvars.force);
+}
+
+bool CommandWrapper(cml::CObject command) {
+    using namespace cml;
+
+    CObject commandType = command["command"];
+    if(commandType.Class() != EObjectClass::String) {
+        return false;
+    }
+
+    CObject commandArgs = command["args"];
+    if(commandArgs.Class() != EObjectClass::Array) {
+        return false;
+    }
+
+    if( strcmp(commandType.AsString(), "run") == 0 ) {
+        return ExecCommand(ECommand::Run, commandArgs);
+    } else if( strcmp(commandType.AsString(), "move") == 0 ) {
+        return ExecCommand(ECommand::Move, commandArgs);
+    } else if( strcmp(commandType.AsString(), "copy") == 0 ) {
+        return ExecCommand(ECommand::Copy, commandArgs);
+    }
+
+    return false;
 }
 
 bool DoTarget(const char* sName, cml::CObject pData) {
@@ -52,6 +76,23 @@ bool DoTarget(const char* sName, cml::CObject pData) {
     if( TargetDone(sName) ) {
         Print(ECode::Spam, "Target '%s' is already done, skipping...\n", sName);
         return true;
+    }
+    
+    bool hasValidExec = false;
+
+    CObject execList = pData["exec"];
+    hasValidExec = execList.Class() == EObjectClass::Array;
+    int execCounter = 0;
+
+    CObject command = execList.Index(0);
+
+    if(hasValidExec && command && command.Class() == EObjectClass::Object) {
+        bool result = CommandWrapper(command);                                  // Pre-building hook command
+        execCounter++;
+
+        if(!result) {
+            Print(ECode::Spam, "Failed to execute the prebuild hook\n");
+        }
     }
     
     Print(ECode::Info, "Working on: '%s'\n", sName);
@@ -109,7 +150,7 @@ bool DoTarget(const char* sName, cml::CObject pData) {
         return false;
     }
 
-    array_t<string_t> aFiles;
+    array_t<string_t> sourceFiles;
     array_t<string_t> objectFiles;
 
     CObject pClass = pData["class"];
@@ -122,7 +163,7 @@ bool DoTarget(const char* sName, cml::CObject pData) {
             continue;
         }
 
-        ResolveFileMask(aFiles, pCurrent.AsString());
+        ResolveFileMask(sourceFiles, pCurrent.AsString());
     }
 
     char sObjBuff[256];
@@ -137,9 +178,9 @@ bool DoTarget(const char* sName, cml::CObject pData) {
 
     bool failed = false;
 
-    for(size_t i = 0; i < aFiles.Length(); i++) {
+    for(size_t i = 0; i < sourceFiles.Length(); i++) {      // compiling le files
         includesReg.Clear();
-        const char* sPath = aFiles[i].String();
+        const char* sPath = sourceFiles[i].String();
 
         int needsCompile = 0;
 
@@ -199,8 +240,20 @@ bool DoTarget(const char* sName, cml::CObject pData) {
         for (size_t i = 0; i < changedHeaders.Length(); i++) {
             CacheFile(changedHeaders.IndexKey(i).String());
         }
+
+        CObject postBuildCommand = execList.Index(execCounter);
+        if(hasValidExec && postBuildCommand && postBuildCommand.Class() == EObjectClass::Object) {          // Post-compile hook
+            bool result = CommandWrapper(postBuildCommand);
+            execCounter++;
+
+            if(!result) {
+                Print(ECode::Spam, "Failed to execute the post-compile hook\n");
+            }
+        }
+    } else {
+        return false;
     }
-    
+
     Print(ECode::Info, "%s\n", "Linking...");
 
     CObject pOutput = pData["out"];
@@ -240,6 +293,16 @@ bool DoTarget(const char* sName, cml::CObject pData) {
     }
 
     if(code == 0) {
+        CObject postLinkCommand = execList.Index(execCounter);
+        if(hasValidExec && postLinkCommand && postLinkCommand.Class() == EObjectClass::Object) {
+            bool result = CommandWrapper(postLinkCommand);
+            execCounter++;
+
+            if(!result) {
+                Print(ECode::Spam, "Failed to execute the post-linking hook\n");
+            }
+        }
+
         g_cvars.targetsStatus[sName] = true;
         return true;
     } else {
@@ -270,13 +333,20 @@ bool ResolveExternalDeps(cml::CObject pData) {
         string_t temp = pPath.AsString();
 
         char* lastSlash = strrchr((char*)temp, '/');
-        char* sProject = (char*)pPath.AsString();
+
+        #if defined(CBB_WINDOWS)
+        if(lastSlash == NULL) {
+            lastSlash = strrchr((char*)temp, '\\');
+        }
+        #endif
+
+        char* project = (char*)pPath.AsString();
 
         int code = 0;
 
         if(lastSlash != NULL) {
             *lastSlash = '\0';
-            sProject = lastSlash+1;
+            project = lastSlash+1;
             code = SetPWD(temp.String());
 
             if(code != 0) {
@@ -284,17 +354,17 @@ bool ResolveExternalDeps(cml::CObject pData) {
             }
         }
 
-        string_t sCommand;
-        sCommand.PushFormatted("cbb -p \"%s\" -t \"%s\" --add-tabs %d", sProject, pTarget.AsString(), g_cvars.addTabs+2);
+        string_t command;
+        command.PushFormatted("cbb -p \"%s\" -t \"%s\" --add-tabs %d", project, pTarget.AsString(), g_cvars.addTabs+2);
 
         if(g_cvars.force) {
-            sCommand.PushFormatted(" -f");
+            command.PushFormatted(" -f");
         }
 
-        Print(ECode::Spam, "\t%s->%s:\n", sProject, pTarget.AsString());
-        Print(ECode::Spam, "\t\t%s\n", sCommand.String());
+        Print(ECode::Spam, "\t%s->%s:\n", project, pTarget.AsString());
+        Print(ECode::Spam, "\t\t%s\n", command.String());
         
-        code = system(sCommand.String());
+        code = system(command.String());
 
         if(code != 0) {
             return false;

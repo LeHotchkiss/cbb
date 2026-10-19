@@ -20,6 +20,8 @@ cbb {
         ld_args [ ]
 
         out "test"
+
+        exec []
     }
 
     debug {
@@ -39,5 +41,26 @@ targets {
         includes [ "." "include_test" ]
 
         out "scan_test"
+
+        # executed based on it`s index in this list
+        exec [
+            # step 1 - before doing anything
+            {
+                command "move"
+                args ["source.a" "dest.a"]
+            }
+
+            # step 2 - after successful compiling
+            {
+                command "run"
+                args ["scripts/run_test.sh"]
+            }
+
+            #step 3 - after successful linking
+            {
+                command "copy"
+                args ["source.cpp" "dest.cpp"]
+            }
+        ]
     }
 }

@@ -17,15 +17,22 @@
 
 #include "CML.h"
 
+enum class ECommand : int {
+    Move,
+    Copy,
+    Run
+};
+
 extern struct cbb_state_t {
-    char* projectFile   = (char*)CBB_DEFAULT_PROJECT;
-    bool force          = false;
-    bool buildAll       = false;
-    bool clear          = false;
-    bool ignoreErrors   = false;
-    int addTabs         = 0;
-    int verbosity       = 1;
-    bool ignoreHeaders  = false;
+    char* projectFile       = (char*)CBB_DEFAULT_PROJECT;
+    bool  force             = false;
+    bool  buildAll          = false;
+    bool  clear             = false;
+    bool  ignoreErrors      = false;
+    int   addTabs           = 0;
+    int   verbosity         = 3;
+    bool  ignoreHeaders     = false;
+    bool  safe              = false;
 
     cml::string_t gccPrefix;
     cml::table_t<hlib::CConstString, bool> targetsStatus;
@@ -54,5 +61,7 @@ int SetPWD(const char* sPath);
 void ScanIncludes(cml::table_t<cml::string_t, bool>& filesReg, cml::CObject pIncludes, const char* sPath, bool isHeader);
 
 cml::string_t GetAbsolutePath(const char*);
+
+bool ExecCommand(ECommand cmd, cml::CObject args);
 
 #endif
