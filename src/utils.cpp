@@ -89,7 +89,7 @@ void ResolveFileMask(cml::array_t<cml::string_t>& filesArray, const char* sPath)
         globfree(&data);
 
     #elif defined(CBB_WINDOWS)
-
+        static_assert(false, "w*ndows");
     #endif
 }
 

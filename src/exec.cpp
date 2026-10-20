@@ -63,6 +63,10 @@ bool Exec_Copy(CObject args) {
 }
 
 bool ExecCommand(ECommand cmd, CObject args) {
+    if(g_cvars.safe) {
+        return false;
+    }
+
     switch(cmd) {
         case ECommand::Run:     return Exec_Run(args);
         case ECommand::Copy:    return Exec_Copy(args);

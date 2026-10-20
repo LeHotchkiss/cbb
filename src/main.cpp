@@ -38,13 +38,17 @@ bool ParseCMD(int argc, char** argv) {
 
         } else if( CMP("-c", "--clear") ) {
             g_cvars.clear = true;
-            exit(RET_SUCCESS);
+            continue;
 
         } else if( CMP("-h", "--help") ) {
             puts(g_sHelpString);
             exit(RET_SUCCESS);
+
         } else if ( CMP("-i", "--no-headers") ) {
             g_cvars.ignoreHeaders = true;
+            continue;
+        } else if ( CMP("-s", "--safe") ) {
+            g_cvars.safe = true;
             continue;
         }
         
@@ -61,6 +65,9 @@ bool ParseCMD(int argc, char** argv) {
 
             } else if( strcmp(current, "--add-tabs") == 0 ) {
                 g_cvars.addTabs = atoi(next);
+                if(g_cvars.addTabs < 0) {
+                    g_cvars.addTabs = 0;
+                }
                 i++; continue;
 
             } else if( CMP("-o", "--output") ) {
@@ -83,14 +90,14 @@ bool ParseCMD(int argc, char** argv) {
 #ifndef TEST
 
 int main(int argc, char** argv) {
-    if(!SetupProject()) {
-        Print(ECode::Error, "%s\n", "Failed to setup project directory");
-        exit(RET_PROJ_FAIL);
-    }
-
     bool result = ParseCMD(argc, argv);
     if(result != true) {
         exit(RET_BAD_ARGS);
+    }
+
+    if(!SetupProject()) {
+        Print(ECode::Error, "%s\n", "Failed to setup project directory");
+        exit(RET_PROJ_FAIL);
     }
 
     for(size_t i = 0; i < g_cvars.addTabs; i++) {

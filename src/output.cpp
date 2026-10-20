@@ -17,7 +17,7 @@ Arguments are:\n\
     [-a / --all]                        -   add all targets in the project to the queue\n\
     [-v / --version]                    -   print CBB version and exit\n\
     [-h / --help]                       -   print this message and exit\n\
-    [-o / --output]     <0-2>           -   set the verbosiry level with 0 being complete silence and 2 violently touching your terminal\n\
+    [-o / --output]     <0-2>           -   set the verbosiry level, with 0 being complete silence and 2 violently touching your terminal\n\
     [-i / --no-headers]                 -   don`t check whether the included headers have changed\n\
     [-s / --safe]                       -   ignore the execution hooks";
 

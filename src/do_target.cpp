@@ -46,28 +46,35 @@ bool NeedsCompiling(const char* path) {
     return (fileTimeCache != fileTimeReal || g_cvars.force);
 }
 
-bool CommandWrapper(cml::CObject command) {
+bool CommandWrapper(cml::CObject commands) {
     using namespace cml;
 
-    CObject commandType = command["command"];
-    if(commandType.Class() != EObjectClass::String) {
-        return false;
+    int result = 0;
+
+    for(size_t i = 0; i < commands.Length(); i++) {
+        CObject current = commands[i];
+        PrintObject(current);
+
+        CObject commandType = current["command"];
+        if(commandType.Class() != EObjectClass::String) {
+            return false;
+        }
+
+        CObject commandArgs = current["args"];
+        if(commandArgs.Class() != EObjectClass::Array) {
+            return false;
+        }
+
+        if( strcmp(commandType.AsString(), "run") == 0 ) {
+            result += ExecCommand(ECommand::Run, commandArgs);
+        } else if( strcmp(commandType.AsString(), "move") == 0 ) {
+            result += ExecCommand(ECommand::Move, commandArgs);
+        } else if( strcmp(commandType.AsString(), "copy") == 0 ) {
+            result += ExecCommand(ECommand::Copy, commandArgs);
+        }
     }
 
-    CObject commandArgs = command["args"];
-    if(commandArgs.Class() != EObjectClass::Array) {
-        return false;
-    }
-
-    if( strcmp(commandType.AsString(), "run") == 0 ) {
-        return ExecCommand(ECommand::Run, commandArgs);
-    } else if( strcmp(commandType.AsString(), "move") == 0 ) {
-        return ExecCommand(ECommand::Move, commandArgs);
-    } else if( strcmp(commandType.AsString(), "copy") == 0 ) {
-        return ExecCommand(ECommand::Copy, commandArgs);
-    }
-
-    return false;
+    return (result > 0);
 }
 
 bool DoTarget(const char* sName, cml::CObject pData) {
@@ -81,14 +88,12 @@ bool DoTarget(const char* sName, cml::CObject pData) {
     bool hasValidExec = false;
 
     CObject execList = pData["exec"];
-    hasValidExec = execList.Class() == EObjectClass::Array;
-    int execCounter = 0;
+    hasValidExec = execList.Class() == EObjectClass::Object;
 
-    CObject command = execList.Index(0);
+    CObject command = execList["init"];
 
-    if(hasValidExec && command && command.Class() == EObjectClass::Object) {
-        bool result = CommandWrapper(command);                                  // Pre-building hook command
-        execCounter++;
+    if(hasValidExec && command && command.Class() == EObjectClass::Array) {
+        bool result = CommandWrapper(command);                                  // Pre-building hook commands
 
         if(!result) {
             Print(ECode::Spam, "Failed to execute the prebuild hook\n");
@@ -96,8 +101,6 @@ bool DoTarget(const char* sName, cml::CObject pData) {
     }
     
     Print(ECode::Info, "Working on: '%s'\n", sName);
-
-    Print(ECode::Spam, "Resolving external dependencies...\n");
 
     if(!ResolveExternalDeps(pData)) {
         return false;
@@ -184,16 +187,18 @@ bool DoTarget(const char* sName, cml::CObject pData) {
 
         int needsCompile = 0;
 
-        ScanIncludes(includesReg, pIncludes, sPath, false);
+        if(!g_cvars.ignoreHeaders) {
+            ScanIncludes(includesReg, pIncludes, sPath, false);
 
-        for(size_t k = 0; k < includesReg.Length(); k++) {
-            const char* headerPath = includesReg.IndexKey(k);
+            for(size_t k = 0; k < includesReg.Length(); k++) {
+                const char* headerPath = includesReg.IndexKey(k);
 
-            if (NeedsCompiling(headerPath)) {
-                needsCompile++;
+                if (NeedsCompiling(headerPath)) {
+                    needsCompile++;
 
-                if (!changedHeaders.HasKey(headerPath)) {
-                    changedHeaders.Insert(headerPath, true);
+                    if (!changedHeaders.HasKey(headerPath)) {
+                        changedHeaders.Insert(headerPath, true);
+                    }
                 }
             }
         }
@@ -241,10 +246,9 @@ bool DoTarget(const char* sName, cml::CObject pData) {
             CacheFile(changedHeaders.IndexKey(i).String());
         }
 
-        CObject postBuildCommand = execList.Index(execCounter);
+        CObject postBuildCommand = execList["post_compile"];
         if(hasValidExec && postBuildCommand && postBuildCommand.Class() == EObjectClass::Object) {          // Post-compile hook
             bool result = CommandWrapper(postBuildCommand);
-            execCounter++;
 
             if(!result) {
                 Print(ECode::Spam, "Failed to execute the post-compile hook\n");
@@ -288,15 +292,16 @@ bool DoTarget(const char* sName, cml::CObject pData) {
             command.PushFormatted(" -o %s", sOutput);
         }
 
+        ProduceList(command, pData, "ld_args", " %s");
+
         Print(ECode::Spam, "\t%s\n", command.String());
         code = system(command.String());
     }
-
+    
     if(code == 0) {
-        CObject postLinkCommand = execList.Index(execCounter);
+        CObject postLinkCommand = execList["post_link"];
         if(hasValidExec && postLinkCommand && postLinkCommand.Class() == EObjectClass::Object) {
             bool result = CommandWrapper(postLinkCommand);
-            execCounter++;
 
             if(!result) {
                 Print(ECode::Spam, "Failed to execute the post-linking hook\n");
@@ -314,6 +319,8 @@ bool ResolveExternalDeps(cml::CObject pData) {
     using namespace cml;
 
     CObject pDeps = pData["depends_ex"];
+
+    Print(ECode::Spam, "Resolving external dependencies... %s", (pDeps.Length() > 0) ? "\n" : "None\n");
 
     if(pDeps == NIL || pDeps.Class() != EObjectClass::Array) {
         return true;
